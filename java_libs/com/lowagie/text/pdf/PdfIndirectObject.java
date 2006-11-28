@@ -80,8 +80,8 @@ public class PdfIndirectObject {
 /** the generation number */
     protected int generation = 0;
     
-    static final byte STARTOBJ[] = DocWriter.getISOBytes(" obj\n");
-    static final byte ENDOBJ[] = DocWriter.getISOBytes("\nendobj\n");
+    static final byte STARTOBJ[] = DocWriter.getISOBytes(" obj "); // ssteward
+    static final byte ENDOBJ[] = DocWriter.getISOBytes("\nendobj "); // ssteward
     static final int SIZEOBJ = STARTOBJ.length + ENDOBJ.length;
     PdfObject object;
     PdfWriter writer;
@@ -157,10 +157,15 @@ public class PdfIndirectObject {
  */
     void writeTo(OutputStream os) throws IOException
     {
+	// ssteward: don't os.write() anything here, before the number, or you'll throw off the xref position
         os.write(DocWriter.getISOBytes(String.valueOf(number)));
         os.write(' ');
         os.write(DocWriter.getISOBytes(String.valueOf(generation)));
         os.write(STARTOBJ);
+	// ssteward
+        //int type = object.type();
+        //if (type != PdfObject.ARRAY && type != PdfObject.DICTIONARY && type != PdfObject.NAME && type != PdfObject.STRING)
+        //    os.write(' ');
         object.toPdf(writer, os);
         os.write(ENDOBJ);
     }

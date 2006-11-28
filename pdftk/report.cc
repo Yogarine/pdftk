@@ -1029,7 +1029,8 @@ ReportOnPdf( ostream& ofs,
 					ReportOutlines( ofs, top_outline_p, 0, reader_p );
 				}
 				else { // error
-					cerr << "Internal Error: invalid top_outline_p in ReportOnPdf()" << endl;
+					// okay, not a big deal
+					// cerr << "Internal Error: invalid top_outline_p in ReportOnPdf()" << endl;
 				}
 			}
 
@@ -1244,6 +1245,157 @@ UpdateInfo( itext::PdfReader* reader_p,
 	else { // error
 		cerr << "Error: unable to load Info data" << endl;
 		ret_val_b= false;
+	}
+
+	return ret_val_b;
+}
+
+static bool
+copyStdinToFile( const char* fn )
+{
+	bool ret_val_b= true;
+
+	FILE* fp= fopen( fn, "wb" );
+	if( fp ) {
+		int cc= 0;
+		while( (cc=fgetc(stdin))!= EOF ) {
+			fputc( cc, fp );
+		}
+		ret_val_b= (ferror(fp)==0);
+		fclose( fp );
+	}
+	else {
+		ret_val_b= false;
+	}
+
+	return ret_val_b;
+}
+
+bool
+ReplaceXmp( itext::PdfReader* reader_p,
+						string xmp_filename )
+{
+	bool ret_val_b= true;
+
+	char xmp_fn_1[L_tmpnam]= "";
+
+	itext::PdfDictionary* catalog_p= reader_p->catalog;
+	if( catalog_p && catalog_p->isDictionary() ) {
+
+		// stdin? copy to temp file
+		if( xmp_filename== "-" ) {
+			tmpnam( xmp_fn_1 );
+			ret_val_b= copyStdinToFile( xmp_fn_1 );
+			xmp_filename= xmp_fn_1;
+		}
+		if( ret_val_b ) {
+
+			string xmp_ss; {
+				FILE* fp= fopen( xmp_filename.c_str(), "r" );
+				if( fp ) {
+					int cc= 0;
+					while( (cc=fgetc(fp))!= EOF ) {
+						xmp_ss+= cc;
+					}
+					ret_val_b= (ferror(fp)==0);
+					fclose( fp );
+				}
+				else {
+					ret_val_b= false;
+				}
+			}
+			if( ret_val_b ) {
+
+				jbyteArray xmp_sa_p= JvNewByteArray( xmp_ss.size() );
+				memcpy( (char*)(elements(xmp_sa_p)),
+								xmp_ss.c_str(),
+								xmp_ss.size() );
+
+				itext::PdfStream* xmp_str_p= new itext::PdfStream( xmp_sa_p );
+				if( xmp_str_p ) {
+					xmp_str_p->put( itext::PdfName::TYPE, itext::PdfName::METADATA );
+					xmp_str_p->put( itext::PdfName::SUBTYPE, itext::PdfName::XML );
+			
+					itext::PdfIndirectReference* xmp_str_ref_p=
+						(itext::PdfIndirectReference*)reader_p->getPRIndirectReference( xmp_str_p );
+
+					catalog_p->put( itext::PdfName::METADATA, xmp_str_ref_p );
+				}
+				else {
+					ret_val_b= false;
+				}
+			}
+		}
+
+		if( xmp_fn_1[0] ) {
+			remove( xmp_fn_1 );
+		}
+	}
+	else {
+		ret_val_b= false;
+	}
+
+	return ret_val_b;
+}
+
+bool
+UpdateXmp( itext::PdfReader* reader_p,
+					 string xmp_filename )
+{
+	// assume we already tested for existence of rdfcat program;
+	// using temp files here because it seems less expensive
+	// than forking pdftk and then using pipes;
+
+	bool ret_val_b= true;
+
+	jbyteArray metadata_p= reader_p->getMetadata();
+	if( metadata_p ) {
+
+		char xmp_fn_1[L_tmpnam]= "";
+		char xmp_fn_2[L_tmpnam]= "";
+		char xmp_out_fn[L_tmpnam]= "";
+
+		tmpnam( xmp_fn_2 );
+		tmpnam( xmp_out_fn );
+
+		// copy PDF's current XMP to temp file
+		FILE* fp= fopen( xmp_fn_2, "wb" );
+		if( fp ) {
+			fputs( (char*)elements(metadata_p), fp );
+			fclose( fp );
+
+			// stdin? copy to temp file
+			if( xmp_filename== "-" ) {
+				tmpnam( xmp_fn_1 );
+				ret_val_b= copyStdinToFile( xmp_fn_1 );
+				xmp_filename= xmp_fn_1;
+			}
+			if( ret_val_b ) {
+
+				string command= string("rdfcat -sxp ")+ xmp_filename+ 
+					string(" ")+ string(xmp_fn_2)+ string(" > ")+ string(xmp_out_fn);
+					
+				// TODO: rdfcat needs to return success code
+				ret_val_b= (system(command.c_str())== 0);
+				if( ret_val_b ) {
+						
+					ret_val_b= ReplaceXmp( reader_p, xmp_out_fn );
+				}
+
+				remove( xmp_out_fn );
+				if( xmp_fn_1[0] ) {
+					remove( xmp_fn_1 );
+				}
+			}
+			
+			remove( xmp_fn_2 );
+		}
+		else { // error
+			ret_val_b= false;
+		}
+
+	}
+	else { // no local metadata; simply replace; TODO: check Info?
 	}
 
 	return ret_val_b;

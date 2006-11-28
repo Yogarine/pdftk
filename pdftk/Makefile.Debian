@@ -12,7 +12,7 @@
 
 # tools
 TOOLPATH=
-VERSUFF= -3.3
+VERSUFF=-4.1
 CXX= $(TOOLPATH)g++$(VERSUFF)
 export GCJ= $(TOOLPATH)gcj$(VERSUFF)
 export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
@@ -23,11 +23,12 @@ export RM= rm
 # if you want pdftk to ask before overwriting a file, set
 # ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
 # with the dont_ask or do_ask command-line options
-CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false
+CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
 CXXFLAGS= -lgcj
 
 # itext compiler flags
-export GCJFLAGS=
+# -O3 causes pdftk to segfault (during a cat operation) when compiled on sarge using gcc 3.4.4
+export GCJFLAGS= -O2
 
 #
 export ARFLAGS= rs

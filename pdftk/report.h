@@ -34,3 +34,11 @@ bool
 UpdateInfo( itext::PdfReader* reader_p,
 						istream& ifs );
 
+bool
+ReplaceXmp( itext::PdfReader* reader_p,
+						string xmp_filename );
+
+bool
+UpdateXmp( itext::PdfReader* reader_p,
+					 string xmp_filename );
+

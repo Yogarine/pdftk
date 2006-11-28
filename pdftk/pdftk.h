@@ -59,6 +59,7 @@ public:
 	jint m_input_attach_file_pagenum;
 
 	string m_update_info_filename;
+	string m_update_xmp_filename;
 
   enum keyword {
     none_k= 0,
@@ -69,6 +70,7 @@ public:
 		filter_k, // apply 'filters' to a single, input PDF based on output args
 		dump_data_k, // no PDF output
 		dump_data_fields_k,
+		generate_fdf_k,
 		unpack_files_k, // unpack files from input; no PDF output
 		//
 		first_operation_k= cat_k,
@@ -79,7 +81,9 @@ public:
 		fill_form_k, // read FDF file and fill PDF form fields
 		attach_file_k, // attach files to output
 		update_info_k,
+		update_xmp_k,
 		background_k, // promoted from output option to operation in pdftk 1.10
+		stamp_k,
 
 		// optional attach_file argument
 		attach_file_to_page_k,
@@ -118,6 +122,9 @@ public:
 
 		// forms
 		flatten_k,
+		drop_xfa_k,
+		keep_first_id_k,
+		keep_final_id_k,
 
 		// pdftk options
 		verbose_k,
@@ -130,17 +137,26 @@ public:
 
   typedef unsigned long PageNumber;
 
+	typedef enum { NORTH= 0, EAST= 90, SOUTH= 180, WEST= 270 } PageRotate; // DF rotation
+	typedef bool PageRotateAbsolute; // DF absolute / relative rotation
+
   struct PageRef {
 		InputPdfIndex m_input_pdf_index;
     PageNumber m_page_num; // 1-based
+    PageRotate m_page_rot; // DF rotation
+    PageRotateAbsolute m_page_abs; // DF absolute / relative rotation
 
-		PageRef( InputPdfIndex input_pdf_index, PageNumber page_num ) :
-			m_input_pdf_index( input_pdf_index ), m_page_num( page_num ) {}			
+		PageRef( InputPdfIndex input_pdf_index, PageNumber page_num, PageRotate page_rot= NORTH, PageRotateAbsolute page_abs= false ) :
+			m_input_pdf_index( input_pdf_index ),
+			m_page_num( page_num ),
+			m_page_rot( page_rot ),
+			m_page_abs( page_abs ) {}
   };
   vector< PageRef > m_page_seq;
 
 	string m_form_data_filename;
 	string m_background_filename;
+	string m_stamp_filename;
   string m_output_filename;
 	string m_output_owner_pw;
 	string m_output_user_pw;
@@ -148,6 +164,9 @@ public:
 	bool m_output_uncompress_b;
 	bool m_output_compress_b;
 	bool m_output_flatten_b;
+	bool m_output_drop_xfa_b;
+	bool m_output_keep_first_id_b;
+	bool m_output_keep_final_id_b;
 
 	enum encryption_strength {
 		none_enc= 0,
@@ -185,6 +204,7 @@ private:
 		attach_file_pagenum_e,
 
 		update_info_filename_e,
+		update_xmp_filename_e,
 
 		output_e, // state where we expect output_k, next
     output_filename_e,
@@ -195,6 +215,7 @@ private:
 		output_user_perms_e,
 
 		background_filename_e,
+		stamp_filename_e,
 
 		done_e
 	};
